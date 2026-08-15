@@ -1,0 +1,236 @@
+{
+  "main": {
+    "id": "fa64def584af5337",
+    "type": "split",
+    "children": [
+      {
+        "id": "e7157b81d0d7bbed",
+        "type": "tabs",
+        "dimension": 63.37638376383764,
+        "children": [
+          {
+            "id": "5630734f34e0353d",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "New tab"
+            }
+          }
+        ]
+      },
+      {
+        "id": "8609ad6ce54e8840",
+        "type": "tabs",
+        "dimension": 36.62361623616236,
+        "children": [
+          {
+            "id": "1512fb5a2e5b060e",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "9724b48612815aa3",
+    "type": "split",
+    "children": [
+      {
+        "id": "5e23de3bb66d5143",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "382dc47c280e8c3b",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "b5a12fd707a6e3ca",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "cc7e93ce596ea814",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "355e369c6c5b2a9f",
+    "type": "split",
+    "children": [
+      {
+        "id": "0dcb426deaba58a4",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4d4823c13528af37",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "b33a18f4136b71f3",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "c44dc6749c9bafee",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "aaeb788f71979cc9",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "6e2a4c0baa7af529",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "228 - Belgians in Belfast.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "382dc47c280e8c3b",
+  "lastOpenFiles": [
+    "posts/99-independence-declaration-ec54ad.md",
+    "posts/98-ancient-city-c2e641.md",
+    "posts/97-looking-forward-2024-fe7910.md",
+    "posts/96-review-the-year-2023-c769cf.md",
+    "posts/95-holiday-reading-bf9699.md",
+    "posts/94-gradually-then-suddenly-924bda.md",
+    "posts/93-awakening-and-marathon-93a62c.md",
+    "posts/92-december-in-bangkok-7917cb.md",
+    "posts/91-moving-on-again-55d8c1.md",
+    "posts/90-business-in-hong-kong-64e47d.md",
+    "posts/89-hiking-in-hong-kong-a68ea3.md",
+    "posts/88-november-in-hong-kong-80440d.md",
+    "posts/87-heading-to-hong-kong-929c7a.md",
+    "posts/86-bangkok-settling-in-1f8626.md",
+    "posts/85-friday-13th-and-eclipse-d807d1.md",
+    "posts/84-back-in-bangkok-a1552b.md",
+    "posts/83-holywood-in-transit-c7b840.md",
+    "posts/82-moving-on-again-2653a3.md",
+    "posts/81-iglesias-bosa-and-sassari-f440ef.md",
+    "posts/80-sardinia-for-a-bit-9f60cf.md",
+    "posts/79-belgium-still-at-the-beach-87dcc8.md",
+    "posts/78-briefly-in-belgium-fb6dd6.md",
+    "posts/77-end-of-summer-in-belfast-a723e5.md",
+    "posts/76-holywood-cafe-cba534.md",
+    "posts/75-august-already-44a426.md",
+    "posts/74-another-year-another-birthday-5175b1.md",
+    "posts",
+    "pages",
+    "clipped",
+    "tag"
+  ]
+}

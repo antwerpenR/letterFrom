@@ -1,0 +1,235 @@
+{
+  "main": {
+    "id": "fa64def584af5337",
+    "type": "split",
+    "children": [
+      {
+        "id": "e7157b81d0d7bbed",
+        "type": "tabs",
+        "dimension": 63.37638376383764,
+        "children": [
+          {
+            "id": "5630734f34e0353d",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "New tab"
+            }
+          }
+        ]
+      },
+      {
+        "id": "8609ad6ce54e8840",
+        "type": "tabs",
+        "dimension": 36.62361623616236,
+        "children": [
+          {
+            "id": "1512fb5a2e5b060e",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "9724b48612815aa3",
+    "type": "split",
+    "children": [
+      {
+        "id": "5e23de3bb66d5143",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "382dc47c280e8c3b",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "b5a12fd707a6e3ca",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "cc7e93ce596ea814",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "355e369c6c5b2a9f",
+    "type": "split",
+    "children": [
+      {
+        "id": "0dcb426deaba58a4",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4d4823c13528af37",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "b33a18f4136b71f3",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "c44dc6749c9bafee",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "aaeb788f71979cc9",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "6e2a4c0baa7af529",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "228 - Belgians in Belfast.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "382dc47c280e8c3b",
+  "lastOpenFiles": [
+    "pages/nick-hudson-centralization-is-doomed-to-failure-5efa09.md",
+    "pages/all-gods-allowed-2591f1.md",
+    "pages/crucifixion-of-the-typhonian-712620.md",
+    "pages/peter-and-simon-ed297c.md",
+    "pages/you-are-the-exit-liquidity-5fd7f8.md",
+    "pages/the-year-everything-changed-5cbc40.md",
+    "pages/iran-us-mou-277c87.md",
+    "pages/reawaken-the-immortal-within-f70ed5.md",
+    "pages/quinns-hyperion-6104d1.md",
+    "pages/jon-on-arches-4d74f4.md",
+    "pages/january-in-bangkok-db3517.md",
+    "pages/wisp-citadel-200-38b1a4.md",
+    "pages/stop-reading-the-news-c844e0.md",
+    "pages/kali-yuga-transcript-b83d1b.md",
+    "pages/johnny-vedmore-c48146.md",
+    "pages/the-next-schmita-9282cd.md",
+    "pages/better-than-resolutions-ec9a94.md",
+    "pages/250411-using-grok-my-experience-de4571.md",
+    "pages/power-of-prophecy-27a389.md",
+    "pages/the-great-lie-1ec960.md",
+    "pages/foci-on-linux-8be8e2.md",
+    "pages/simon-and-catherine-d523dc.md",
+    "pages/immich-getting-started-f56ae1.md",
+    "pages/flashback-2021-4e14b6.md",
+    "pages/the-worldwide-secret-network-36bb4e.md",
+    "pages/110-objections-analysed-316825.md",
+    "pages",
+    "tag",
+    "clipped"
+  ]
+}
