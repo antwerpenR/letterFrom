@@ -1,4 +1,4 @@
-import os, sys, json, hashlib, argparse, pathlib, time, tempfile
+import os, re, sys, json, hashlib, argparse, pathlib, time, tempfile
 from dotenv import load_dotenv
 from openai import OpenAI
 import lancedb
@@ -32,11 +32,11 @@ ANSWER_CACHE = pathlib.Path("data/answer_cache.json")
 BLOCK_WORDS = ("content_policy", "safety filter", "blocked", "policy violation")
 
 # --- expansion defaults (query-time policy; tune freely, no re-index) ---
-EXPAND_DEFAULT        = True
-EXPAND_PAGES_DEFAULT  = 5
+EXPAND_DEFAULT          = True
+EXPAND_PAGES_DEFAULT    = 5
 EXPAND_PER_PAGE_DEFAULT = 2
 EXPAND_FROM_TOP_DEFAULT = 3
-PER_DOC_DEFAULT       = 2
+PER_DOC_DEFAULT         = 0      # 0 = no cap (best relevance; preserves deep single-doc coverage)
 
 GENERIC_INSTR = (
     "Summarize this newsletter issue as a structured digest. Use these exact "
@@ -121,14 +121,16 @@ def _dedup(rows, per_doc, limit):
     return out
 
 
-def retrieve(question, k=8, doc_type=None, per_doc=PER_DOC_DEFAULT, oversample=5):
-    """Hybrid search. doc_type in {None, 'post', 'page'} -> prefiltered."""
+def retrieve(question, k=8, doc_type=None, per_doc=PER_DOC_DEFAULT):
+    """Hybrid search. k bounds EACH leg's candidates -> keep it small."""
     qv = client.embeddings.create(model=EMBED_MODEL, input=[question]).data[0].embedding
     q = tbl.search(query_type="hybrid").vector(qv).text(question)
     if doc_type:
         q = q.where("doc_type = '" + doc_type + "'")
-    rows = q.limit(max(k * oversample, 40)).to_list()   # over-fetch, then thin
-    return _dedup(rows, per_doc, k)
+    rows = q.limit(k).to_list()          # <- pool == k; no over-fetch
+    if per_doc and per_doc > 0:
+        rows = _dedup(rows, per_doc, k)
+    return rows
 
 
 def expand_links(hits, max_pages=EXPAND_PAGES_DEFAULT, per_page=EXPAND_PER_PAGE_DEFAULT,
@@ -150,11 +152,15 @@ def expand_links(hits, max_pages=EXPAND_PAGES_DEFAULT, per_page=EXPAND_PER_PAGE_
     return _dedup(rows, per_page, max_pages * per_page)
 
 
+_TITLE_NUM = re.compile(r"^\s*0*(\d+)\s*[-–—.:]\s*")
+
+
 def _clean_title(t, iid):
+    """Strip a leading 'NNN - ' prefix, tolerating zero-padding mismatches."""
     t = (t or "").strip()
-    for pre in (iid + " - ", iid + "-", iid + ". ", iid + " "):
-        if t.startswith(pre):
-            return t[len(pre):].strip()
+    m = _TITLE_NUM.match(t)
+    if m and iid and str(iid).isdigit() and m.group(1) == str(int(iid)):
+        return t[m.end():].strip()
     return t
 
 
@@ -383,7 +389,7 @@ if __name__ == "__main__":
     ap.add_argument("--expand-from-top", type=int, default=EXPAND_FROM_TOP_DEFAULT,
                     help="only the top-N post hits seed expansion (default: 3)")
     ap.add_argument("--per-doc", type=int, default=PER_DOC_DEFAULT,
-                    help="max chunks per document in retrieval (default: 2)")
+                    help="max chunks per document (0 = off; default: 0)")
     a = ap.parse_args()
 
     if a.stats:
