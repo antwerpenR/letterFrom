@@ -31,6 +31,13 @@ ANSWER_CACHE = pathlib.Path("data/answer_cache.json")
 
 BLOCK_WORDS = ("content_policy", "safety filter", "blocked", "policy violation")
 
+# --- expansion defaults (query-time policy; tune freely, no re-index) ---
+EXPAND_DEFAULT        = True
+EXPAND_PAGES_DEFAULT  = 5
+EXPAND_PER_PAGE_DEFAULT = 2
+EXPAND_FROM_TOP_DEFAULT = 3
+PER_DOC_DEFAULT       = 2
+
 GENERIC_INSTR = (
     "Summarize this newsletter issue as a structured digest. Use these exact "
     "field labels, one per line, and write 'none' when a field does not apply." + NL +
@@ -98,33 +105,116 @@ def chat_with_fallback(prompt, models, tries=2):
     raise last
 
 
-def retrieve(question, k=8):
+# ---------------------------------------------------------------- retrieval
+
+def _dedup(rows, per_doc, limit):
+    """Cap chunks per document so one long doc can't monopolise the top-k."""
+    out, counts = [], {}
+    for r in rows:
+        d = r.get("doc_id") or r.get("issue_id")
+        if counts.get(d, 0) >= per_doc:
+            continue
+        counts[d] = counts.get(d, 0) + 1
+        out.append(r)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def retrieve(question, k=8, doc_type=None, per_doc=PER_DOC_DEFAULT, oversample=5):
+    """Hybrid search. doc_type in {None, 'post', 'page'} -> prefiltered."""
     qv = client.embeddings.create(model=EMBED_MODEL, input=[question]).data[0].embedding
-    return tbl.search(query_type="hybrid").vector(qv).text(question).limit(k).to_list()
+    q = tbl.search(query_type="hybrid").vector(qv).text(question)
+    if doc_type:
+        q = q.where("doc_type = '" + doc_type + "'")
+    rows = q.limit(max(k * oversample, 40)).to_list()   # over-fetch, then thin
+    return _dedup(rows, per_doc, k)
 
 
-def answer(question, k=8):
-    hits = retrieve(question, k)
-    ctx = (NL + NL + "---" + NL + NL).join(
-        "[" + h["issue_id"] + "] " + h["title"] + NL + h["text"] for h in hits)
-    prompt = ("Answer using ONLY the excerpts below. Cite the issue number "
-              "of each excerpt you use." + NL + NL + ctx + NL + NL +
-              "Question: " + question)
+def expand_links(hits, max_pages=EXPAND_PAGES_DEFAULT, per_page=EXPAND_PER_PAGE_DEFAULT,
+                 from_top=EXPAND_FROM_TOP_DEFAULT):
+    """Fetch pages linked from the top-N posts only; per-page quota guaranteed."""
+    wanted, seen = [], set()
+    for h in hits[:from_top]:
+        if h.get("doc_type") != "post":
+            continue
+        for lk in (h.get("links") or []):
+            if lk not in seen:
+                seen.add(lk)
+                wanted.append(lk)
+    wanted = wanted[:max_pages]
+    if not wanted:
+        return []
+    idlist = ", ".join("'" + w.replace("'", "''") + "'" for w in wanted)
+    rows = tbl.search().where("doc_id IN (" + idlist + ")").limit(max_pages * 20).to_list()
+    return _dedup(rows, per_page, max_pages * per_page)
+
+
+def _clean_title(t, iid):
+    t = (t or "").strip()
+    for pre in (iid + " - ", iid + "-", iid + ". ", iid + " "):
+        if t.startswith(pre):
+            return t[len(pre):].strip()
+    return t
+
+
+def label(h):
+    if h.get("doc_type") == "page":
+        return "[page] " + h.get("slug", "") + " - " + h.get("title", "")
+    iid = h.get("issue_id", "?")
+    return "[" + iid + "] " + _clean_title(h.get("title", ""), iid)
+
+
+def build_context(hits, extra):
+    parts = [label(h) + NL + h["text"] for h in hits]
+    body = (NL + NL + "---" + NL + NL).join(parts)
+    if extra:
+        eparts = [label(h) + NL + h["text"] for h in extra]
+        body += (NL + NL + "=== LINKED BACKGROUND PAGES (supporting material; "
+                 "use only if it helps) ===" + NL + NL + (NL + NL).join(eparts))
+    return body
+
+
+def print_sources(hits, extra):
+    """One merged, de-duplicated list; expanded-only docs marked."""
+    main = {(h.get("doc_id") or h.get("issue_id")) for h in hits}
+    seen = set()
+    print(NL + "Sources:")
+    for h in hits + extra:
+        key = h.get("doc_id") or h.get("issue_id")
+        if key in seen:
+            continue
+        seen.add(key)
+        tag = "" if key in main else "   (linked)"
+        print("  - " + label(h) + tag)
+
+
+def answer(question, k=8, doc_type=None, expand=EXPAND_DEFAULT,
+           expand_pages=EXPAND_PAGES_DEFAULT, per_page=EXPAND_PER_PAGE_DEFAULT,
+           per_doc=PER_DOC_DEFAULT, from_top=EXPAND_FROM_TOP_DEFAULT):
+    hits = retrieve(question, k, doc_type=doc_type, per_doc=per_doc)
+    extra = []
+    if expand and doc_type in (None, "all", "post"):
+        extra = expand_links(hits, expand_pages, per_page, from_top)
+    ctx = build_context(hits, extra)
+    prompt = ("Answer using ONLY the excerpts below. Cite each excerpt you use: "
+              "bracketed issue number for newsletter issues (e.g. [237]); the page "
+              "slug for pages (e.g. [page 10-tips-for-obes])." + NL + NL + ctx +
+              NL + NL + "Question: " + question)
     out, _ = chat_with_fallback(prompt, [CHAT_MODEL])
     print(out)
-    print(NL + "Sources:")
-    seen = set()
-    for h in hits:
-        if h["issue_id"] in seen:
-            continue
-        seen.add(h["issue_id"])
-        print("  - [" + h["issue_id"] + "] " + h["title"])
+    print_sources(hits, extra)
 
+
+# ---------------------------------------------------------------- map-reduce
 
 def _group_issues(year=None, lo=None, hi=None):
+    """Posts only - pages are supplementary and excluded from map-reduce."""
     rows = tbl.to_arrow().to_pylist()
     by = {}
     for r in rows:
+        if r.get("doc_type", "post") != "post":
+            continue
         by.setdefault(r["issue_id"], []).append(r)
     items = []
     for iid, cs in by.items():
@@ -255,6 +345,14 @@ def show_stats():
     ids = sorted(set(k.split(":")[1] for k in issues))
     if ids:
         print("generic issues   :", len(ids), "of 241")
+    try:
+        types = {}
+        for r in tbl.to_arrow().to_pylist():
+            t = r.get("doc_type", "post")
+            types[t] = types.get(t, 0) + 1
+        print("index chunks     :", types)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
@@ -272,6 +370,20 @@ if __name__ == "__main__":
     ap.add_argument("--refresh", action="store_true",
                     help="ignore existing summaries, recompute, and update the cache")
     ap.add_argument("--stats", action="store_true", help="show cache contents and exit")
+    ap.add_argument("--type", dest="dtype", choices=["post", "page", "all"],
+                    default="all", help="documents to retrieve (default: all)")
+    ap.add_argument("--expand", dest="expand", action="store_true", default=EXPAND_DEFAULT,
+                    help="pull linked pages into context (default: on)")
+    ap.add_argument("--no-expand", dest="expand", action="store_false",
+                    help="disable linked-page expansion")
+    ap.add_argument("--expand-pages", type=int, default=EXPAND_PAGES_DEFAULT,
+                    help="max linked pages to pull in (default: 5)")
+    ap.add_argument("--expand-per-page", type=int, default=EXPAND_PER_PAGE_DEFAULT,
+                    help="max chunks per linked page (default: 2)")
+    ap.add_argument("--expand-from-top", type=int, default=EXPAND_FROM_TOP_DEFAULT,
+                    help="only the top-N post hits seed expansion (default: 3)")
+    ap.add_argument("--per-doc", type=int, default=PER_DOC_DEFAULT,
+                    help="max chunks per document in retrieval (default: 2)")
     a = ap.parse_args()
 
     if a.stats:
@@ -293,4 +405,8 @@ if __name__ == "__main__":
                          use_cache=not a.no_cache,
                          refresh=a.refresh)
     else:
-        answer(a.question, a.k)
+        dt = None if a.dtype == "all" else a.dtype
+        answer(a.question, a.k, doc_type=dt, expand=a.expand,
+               expand_pages=a.expand_pages, per_page=a.expand_per_page,
+               per_doc=a.per_doc, from_top=a.expand_from_top)
+
