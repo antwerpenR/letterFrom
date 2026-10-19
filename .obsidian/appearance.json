@@ -1,4 +1,7 @@
 {
   "cssTheme": "",
-  "theme": "obsidian"
+  "theme": "obsidian",
+  "interfaceFontFamily": "Annai MN",
+  "textFontFamily": "",
+  "baseFontSize": 20
 }

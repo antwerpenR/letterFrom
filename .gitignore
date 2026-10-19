@@ -1,9 +1,30 @@
 # Obsidian local settings
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
+.obsidian/workspace.sync-conflict-*.json
 .obsidian/cache
 .obsidian/plugins/*/data.json
+
+# Syncthing
+.stfolder/
+.stignore
+*.sync-conflict-*
+
+# Smart Composer plugin (databases + archive)
+.smtcmp_json_db/
+.smtcmp_vector_db.tar.gz
 
 # OS files
 .DS_Store
 .trash/
+
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+
+# Secrets
+.env
+
+# Generated RAG artifacts (derived; rebuild with load.py + index.py)
+data/
