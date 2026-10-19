@@ -28,3 +28,4 @@ __pycache__/
 
 # Generated RAG artifacts (derived; rebuild with load.py + index.py)
 data/
+.obsidian/
