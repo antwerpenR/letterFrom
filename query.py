@@ -38,6 +38,14 @@ EXPAND_PER_PAGE_DEFAULT = 2
 EXPAND_FROM_TOP_DEFAULT = 3
 PER_DOC_DEFAULT         = 0      # 0 = no cap (best relevance; preserves deep single-doc coverage)
 
+# --- Fix B: per-leg over-fetch factor for hybrid retrieval -------------------
+# limit() bounds the candidates EACH leg (vector, FTS) contributes BEFORE RRF
+# fusion -- a ranking knob, not a page size. pool>1 over-fetches per leg so
+# mid-ranked docs can still reach the fused top-k, then trims back to k AFTER
+# fusion. pool=1 reproduces the original tuned behaviour EXACTLY, so raising
+# this is the only thing that changes rankings.
+POOL_DEFAULT            = 1
+
 GENERIC_INSTR = (
     "Summarize this newsletter issue as a structured digest. Use these exact "
     "field labels, one per line, and write 'none' when a field does not apply." + NL +
@@ -121,16 +129,21 @@ def _dedup(rows, per_doc, limit):
     return out
 
 
-def retrieve(question, k=8, doc_type=None, per_doc=PER_DOC_DEFAULT):
-    """Hybrid search. k bounds EACH leg's candidates -> keep it small."""
+def retrieve(question, k=8, doc_type=None, per_doc=PER_DOC_DEFAULT, pool=POOL_DEFAULT):
+    """Hybrid search. limit() bounds EACH leg's candidates before fusion.
+
+    pool=1  -> limit(k):   original behaviour (hard recall ceiling at k per leg)
+    pool>1  -> limit(k*pool) per leg, fuse, dedup, then trim to k AFTER fusion.
+    """
     qv = client.embeddings.create(model=EMBED_MODEL, input=[question]).data[0].embedding
     q = tbl.search(query_type="hybrid").vector(qv).text(question)
     if doc_type:
         q = q.where("doc_type = '" + doc_type + "'")
-    rows = q.limit(k).to_list()          # <- pool == k; no over-fetch
+    want = k * max(1, pool)
+    rows = q.limit(want).to_list()
     if per_doc and per_doc > 0:
-        rows = _dedup(rows, per_doc, k)
-    return rows
+        rows = _dedup(rows, per_doc, want)
+    return rows[:k]
 
 
 def expand_links(hits, max_pages=EXPAND_PAGES_DEFAULT, per_page=EXPAND_PER_PAGE_DEFAULT,
@@ -197,8 +210,9 @@ def print_sources(hits, extra):
 
 def answer(question, k=8, doc_type=None, expand=EXPAND_DEFAULT,
            expand_pages=EXPAND_PAGES_DEFAULT, per_page=EXPAND_PER_PAGE_DEFAULT,
-           per_doc=PER_DOC_DEFAULT, from_top=EXPAND_FROM_TOP_DEFAULT):
-    hits = retrieve(question, k, doc_type=doc_type, per_doc=per_doc)
+           per_doc=PER_DOC_DEFAULT, from_top=EXPAND_FROM_TOP_DEFAULT,
+           pool=POOL_DEFAULT):
+    hits = retrieve(question, k, doc_type=doc_type, per_doc=per_doc, pool=pool)
     extra = []
     if expand and doc_type in (None, "all", "post"):
         extra = expand_links(hits, expand_pages, per_page, from_top)
@@ -348,17 +362,22 @@ def show_stats():
     print("  per-question   :", len(quests))
     print("answer_cache.json:", len(a), "final answers")
     print("prompt version   :", PROMPT_VER)
+    print("embed model      :", EMBED_MODEL)
     ids = sorted(set(k.split(":")[1] for k in issues))
-    if ids:
-        print("generic issues   :", len(ids), "of 241")
     try:
+        rows = tbl.to_arrow().to_pylist()
+    except Exception:
+        rows = []
+    posts = {r.get("issue_id") for r in rows
+             if r.get("doc_type", "post") == "post" and r.get("issue_id")}
+    if ids:
+        print("generic issues   :", len(ids), "of", len(posts))
+    if rows:
         types = {}
-        for r in tbl.to_arrow().to_pylist():
+        for r in rows:
             t = r.get("doc_type", "post")
             types[t] = types.get(t, 0) + 1
         print("index chunks     :", types)
-    except Exception:
-        pass
 
 
 if __name__ == "__main__":
@@ -368,6 +387,9 @@ if __name__ == "__main__":
     ap.add_argument("--year", type=int, help="map-reduce over one year (needs dates)")
     ap.add_argument("--range", dest="rng", help="issue-number range, e.g. 45-96")
     ap.add_argument("-k", type=int, default=8)
+    ap.add_argument("--pool", type=int, default=POOL_DEFAULT,
+                    help="per-leg over-fetch factor before RRF fusion "
+                         "(1 = original behaviour; try 3-5)")
     ap.add_argument("--cache-mode", choices=["issue", "question"], default="issue",
                     help="issue: one generic summary per issue, reused across all "
                          "questions (default); question: tailored per-question summaries")
@@ -414,5 +436,6 @@ if __name__ == "__main__":
         dt = None if a.dtype == "all" else a.dtype
         answer(a.question, a.k, doc_type=dt, expand=a.expand,
                expand_pages=a.expand_pages, per_page=a.expand_per_page,
-               per_doc=a.per_doc, from_top=a.expand_from_top)
+               per_doc=a.per_doc, from_top=a.expand_from_top,
+               pool=a.pool)
 
