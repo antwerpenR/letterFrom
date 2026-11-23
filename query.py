@@ -284,7 +284,7 @@ def answer_key(question, year, lo, hi, mode):
 
 
 def answer_mapreduce(question, year=None, lo=None, hi=None, mode="issue",
-                     use_cache=True, refresh=False):
+                     use_cache=True, refresh=False, map_cache=True, remap=False):
     items = _group_issues(year, lo, hi)
     if not items:
         print("No issues matched (check --range / --year).")
@@ -299,9 +299,9 @@ def answer_mapreduce(question, year=None, lo=None, hi=None, mode="issue",
         return
 
     cache = load_json(MAP_CACHE)
-    read = use_cache and not refresh
-    write = use_cache
-
+    read  = map_cache and not remap
+    write        = True       # map summaries: always persist
+    write_answer = use_cache   # answer: skip on throwaway probes
     partials, skipped = [], []
     have = sum(1 for num, iid, cs in items
                if read and map_key(question, iid, mode) in cache)
@@ -340,7 +340,7 @@ def answer_mapreduce(question, year=None, lo=None, hi=None, mode="issue",
     print(out)
     print(NL + "(reduced with " + model + ")", file=sys.stderr)
 
-    if write:
+    if write_answer:
         acache[akey] = {"answer": out, "models": model,
                         "n": len(partials),
                         "skipped": [i for i, _, _ in skipped]}
@@ -393,8 +393,11 @@ if __name__ == "__main__":
     ap.add_argument("--cache-mode", choices=["issue", "question"], default="issue",
                     help="issue: one generic summary per issue, reused across all "
                          "questions (default); question: tailored per-question summaries")
+    ap.add_argument("--remap", action="store_true",
+                        help="recompute map summaries instead of reusing map_cache.json")
     ap.add_argument("--no-cache", action="store_true",
-                    help="uncached run: ignore both caches and write nothing")
+                    help="ignore the cached ANSWER only (map cache is always reused; "
+                         "use --remap to rebuild summaries)")
     ap.add_argument("--refresh", action="store_true",
                     help="ignore existing summaries, recompute, and update the cache")
     ap.add_argument("--stats", action="store_true", help="show cache contents and exit")
@@ -431,6 +434,7 @@ if __name__ == "__main__":
         answer_mapreduce(a.question, a.year, lo, hi,
                          mode=a.cache_mode,
                          use_cache=not a.no_cache,
+                         map_cache=not a.remap,
                          refresh=a.refresh)
     else:
         dt = None if a.dtype == "all" else a.dtype

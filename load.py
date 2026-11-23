@@ -18,6 +18,18 @@ WIKI_LINK = re.compile(r"\[\[([^\]|]+)(?:\|[^\]]*)?\]\]")
 # only links pointing at your own site can be page links
 SITE_HOSTS = {"rogerprice.me", "www.rogerprice.me"}
 
+def norm_date(fm):
+    """Front-matter date -> 'YYYY-MM-DD'. '' when absent or unparseable.
+
+    Key order matters: 'published' (article/newsletter date) wins over
+    'clipped' (Web Clipper capture time). Accepts quoted ISO timestamps,
+    plain dates, and datetime/date objects from PyYAML.
+    """
+    fm = fm or {}
+    v = fm.get("published") or fm.get("date") or fm.get("clipped") or ""
+    s = str(v).strip().strip("'").strip('"')
+    return s[:10] if len(s) >= 10 and s[4] == "-" and s[7] == "-" else ""
+
 
 def split_fm(text):
     m = FM.match(text)
@@ -126,7 +138,7 @@ def main():
                 f.write(json.dumps({
                     "id": f"{iid}-{i:03d}", "issue_id": iid,
                     "issue_num": num if num is not None else -1,
-                    "title": title, "date": meta.get("date", ""), "source": p.name,
+                    "title": title, "date": norm_date(meta), "source": p.name,
                     "doc_type": "post", "doc_id": f"post:{iid}",
                     "slug": "", "links": links, "text": ch,
                 }, ensure_ascii=False) + "\n")
@@ -141,7 +153,7 @@ def main():
             for i, ch in enumerate(chunk_md(body)):
                 f.write(json.dumps({
                     "id": f"page-{stem}-{i:03d}", "issue_id": "",
-                    "issue_num": -1, "title": title, "date": meta.get("date", ""),
+                    "issue_num": -1, "title": title, "date": norm_date(meta),
                     "source": p.name, "doc_type": "page",
                     "doc_id": f"page:{stem}", "slug": bare_slug(stem),
                     "links": links, "text": ch,
