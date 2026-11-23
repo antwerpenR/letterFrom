@@ -33,3 +33,5 @@ Clippings/
 books2026.py
 index.log
 .python-version
+
+.obsidian/workspace*.json
