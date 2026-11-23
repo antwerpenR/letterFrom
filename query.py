@@ -265,14 +265,55 @@ def build_map_prompt(question, iid, title, text, mode):
     return instr + NL + NL + head + NL + NL + text
 
 
+# ---- cache versioning ----------------------------------------------------
+# MAP_VER   : hash of the MAP-side inputs (GENERIC_INSTR, QUESTION_INSTR,
+#             MAP_MODELS). Moves by itself when you edit those. Changing it
+#             invalidates every map summary.
+# REDUCE_VER: bump BY HAND when the reduce prompt changes. Invalidates final
+#             answers only -- the 248 map summaries are reused.
+# map_sig   : digest of current summaries, stored in each answer. Any change
+#             to any summary invalidates answers built from the old ones.
+MAP_VER = PROMPT_VER          # identical value: existing keys keep hitting
+REDUCE_VER = 1
+
+
+def _summary(v):
+    """Map values are {summary, map_ver, model}; tolerate legacy bare strings."""
+    return v if isinstance(v, str) else (v.get("summary") or "")
+
+
+def _map_entry(summary, model):
+    return {"summary": summary, "map_ver": MAP_VER, "model": model}
+
+
+def _map_ok(v):
+    return isinstance(v, dict) and v.get("map_ver") == MAP_VER
+
+
+def map_sig(cache):
+    """10-hex digest over every summary; changes iff any map changed."""
+    h = hashlib.sha256()
+    for k in sorted(k for k in cache if not k.startswith("_")):
+        h.update(k.encode()); h.update(b"\x00")
+        h.update((_summary(cache[k]) or "").encode()); h.update(b"\x00")
+    return h.hexdigest()[:10]
+
+
+def _ans_ok(rec, sig):
+    return (isinstance(rec, dict)
+            and rec.get("reduce_ver") == REDUCE_VER
+            and rec.get("map_ver") == MAP_VER
+            and rec.get("map_sig") == sig)
+
+
 def _summarize(question, iid, title, text, cache, mode, read, write):
     key = map_key(question, iid, mode)
-    if read and key in cache:
-        return cache[key], "cache"
+    if read and key in cache and _map_ok(cache[key]):
+        return _summary(cache[key]), "cache"
     prompt = build_map_prompt(question, iid, title, text, mode)
     summary, model = chat_with_fallback(prompt, MAP_MODELS)
     if write:
-        cache[key] = summary
+        cache[key] = _map_entry(summary, model)
         save_json(MAP_CACHE, cache)
     return summary, model
 
@@ -291,8 +332,10 @@ def answer_mapreduce(question, year=None, lo=None, hi=None, mode="issue",
         return
 
     akey = answer_key(question, year, lo, hi, mode)
+    cache = load_json(MAP_CACHE)
+    sig = map_sig(cache)
     acache = load_json(ANSWER_CACHE)
-    if use_cache and not refresh and akey in acache:
+    if use_cache and not refresh and akey in acache and _ans_ok(acache[akey], sig):
         print(acache[akey]["answer"])
         print(NL + "(from answer cache; use --no-cache or --refresh to recompute)",
               file=sys.stderr)
@@ -344,6 +387,8 @@ def answer_mapreduce(question, year=None, lo=None, hi=None, mode="issue",
         acache[akey] = {"answer": out, "models": model,
                         "n": len(partials),
                         "skipped": [i for i, _, _ in skipped]}
+        acache[akey].update({"reduce_ver": REDUCE_VER, "map_ver": MAP_VER,
+                            "map_sig": sig})
         save_json(ANSWER_CACHE, acache)
 
     if skipped:
@@ -357,6 +402,9 @@ def show_stats():
     a = load_json(ANSWER_CACHE)
     issues = [k for k in m if k.startswith("issue:")]
     quests = [k for k in m if k.startswith("q:")]
+    print("map version      :", MAP_VER)
+    print("reduce version   :", REDUCE_VER)
+    print("legacy maps      :", len([v for v in m.values() if isinstance(v, str)]))
     print("map_cache.json   :", len(m), "entries")
     print("  generic (issue):", len(issues), "  <- unique issues summarized generically")
     print("  per-question   :", len(quests))
@@ -394,12 +442,13 @@ if __name__ == "__main__":
                     help="issue: one generic summary per issue, reused across all "
                          "questions (default); question: tailored per-question summaries")
     ap.add_argument("--remap", action="store_true",
-                        help="recompute map summaries instead of reusing map_cache.json")
+                    help="recompute map summaries instead of reusing map_cache.json "
+                         "(invalidates cached answers)")
     ap.add_argument("--no-cache", action="store_true",
                     help="ignore the cached ANSWER only (map cache is always reused; "
                          "use --remap to rebuild summaries)")
     ap.add_argument("--refresh", action="store_true",
-                    help="ignore existing summaries, recompute, and update the cache")
+                    help="recompute the final ANSWER only (map summaries are reused)")
     ap.add_argument("--stats", action="store_true", help="show cache contents and exit")
     ap.add_argument("--type", dest="dtype", choices=["post", "page", "all"],
                     default="all", help="documents to retrieve (default: all)")
